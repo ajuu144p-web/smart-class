@@ -1,0 +1,639 @@
+<html>
+        <head><title>Downloaded HTML</title></head>
+        <body>
+            <pre style="white-space: pre-wrap; word-wrap: break-word;"><!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Smart Classroom Attendance</title>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background: #eef2f7;
+}
+
+header {
+    background: #1769e0;
+    color: white;
+    padding: 20px;
+    text-align: center;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 20px auto;
+    padding: 15px;
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 15px;
+    box-shadow: 0 3px 12px rgba(0,0,0,.1);
+}
+
+h2 {
+    margin-top: 0;
+}
+
+button {
+    padding: 11px 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #1769e0;
+    color: white;
+    font-size: 15px;
+    margin: 5px;
+}
+
+button:hover {
+    opacity: .85;
+}
+
+.teacher {
+    background: #fff7df;
+}
+
+input {
+    padding: 11px;
+    width: 220px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+}
+
+.stats {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.stat {
+    flex: 1;
+    min-width: 150px;
+    padding: 18px;
+    border-radius: 12px;
+    text-align: center;
+    background: #f4f6f8;
+}
+
+.stat strong {
+    display: block;
+    font-size: 28px;
+    margin-top: 5px;
+}
+
+.present {
+    color: green;
+}
+
+.absent {
+    color: red;
+}
+
+#reader {
+    max-width: 450px;
+    margin: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+}
+
+th {
+    background: #f1f3f5;
+}
+
+.presentBadge {
+    color: green;
+    font-weight: bold;
+}
+
+.absentBadge {
+    color: red;
+    font-weight: bold;
+}
+
+.message {
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 8px;
+    text-align: center;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>📚 Smart Classroom Attendance</h1>
+    <p>65 Student Attendance System</p>
+</header>
+
+<div class="container">
+
+    <!-- Statistics -->
+
+    <div class="card">
+
+        <h2>📊 Today's Attendance</h2>
+
+        <div class="stats">
+
+            <div class="stat">
+                Total Students
+                <strong id="total">65</strong>
+            </div>
+
+            <div class="stat">
+                Present
+                <strong class="present" id="present">0</strong>
+            </div>
+
+            <div class="stat">
+                Absent
+                <strong class="absent" id="absent">65</strong>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- QR Scanner -->
+
+    <div class="card">
+
+        <h2>📷 Scan Student QR Code</h2>
+
+        <p>
+            Ask the student to show their personal QR code.
+        </p>
+
+        <div id="reader"></div>
+
+        <div id="scanMessage"></div>
+
+    </div>
+
+
+    <!-- Teacher Manual Attendance -->
+
+    <div class="card teacher">
+
+        <h2>👨‍🏫 Teacher Manual Attendance</h2>
+
+        <p>
+            Teacher can mark a student present manually.
+        </p>
+
+        <input
+            type="number"
+            id="teacherStudent"
+            placeholder="Student number 1-65"
+            min="1"
+            max="65"
+        >
+
+        <button onclick="teacherMark()">
+            Mark Present
+        </button>
+
+        <button onclick="resetAttendance()">
+            Reset Attendance
+        </button>
+
+        <div id="teacherMessage"></div>
+
+    </div>
+
+
+    <!-- Student List -->
+
+    <div class="card">
+
+        <h2>👥 Student List</h2>
+
+        <table>
+
+            <thead>
+
+                <tr>
+                    <th>No.</th>
+                    <th>Student ID</th>
+                    <th>Status</th>
+                    <th>Time</th>
+                </tr>
+
+            </thead>
+
+            <tbody id="studentTable"></tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+
+<script>
+
+// ========================================
+// CREATE 65 STUDENTS
+// ========================================
+
+let students = [];
+
+for (let i = 1; i <= 65; i++) {
+
+    students.push({
+
+        number: i,
+
+        id: "STU" + String(i).padStart(3, "0"),
+
+        present: false,
+
+        time: ""
+
+    });
+
+}
+
+
+// ========================================
+// LOAD SAVED ATTENDANCE
+// ========================================
+
+let saved =
+    localStorage.getItem("attendanceData");
+
+if (saved) {
+
+    students = JSON.parse(saved);
+
+}
+
+
+// ========================================
+// SAVE ATTENDANCE
+// ========================================
+
+function saveData() {
+
+    localStorage.setItem(
+        "attendanceData",
+        JSON.stringify(students)
+    );
+
+}
+
+
+// ========================================
+// MARK STUDENT PRESENT
+// ========================================
+
+function markStudent(studentId) {
+
+    let student =
+        students.find(
+            s => s.id.toUpperCase() ===
+            studentId.toUpperCase()
+        );
+
+
+    if (!student) {
+
+        showMessage(
+            "scanMessage",
+            "❌ Student not found: " + studentId,
+            "red"
+        );
+
+        return;
+
+    }
+
+
+    if (student.present) {
+
+        showMessage(
+            "scanMessage",
+            "⚠️ Attendance already marked for " +
+            student.id,
+            "orange"
+        );
+
+        return;
+
+    }
+
+
+    let now = new Date();
+
+    student.present = true;
+
+    student.time =
+        now.toLocaleTimeString();
+
+
+    saveData();
+
+    updateDisplay();
+
+
+    showMessage(
+        "scanMessage",
+        "✅ " + student.id +
+        " attendance marked!",
+        "green"
+    );
+
+}
+
+
+// ========================================
+// QR SCANNER
+// ========================================
+
+function qrSuccess(decodedText) {
+
+    /*
+       QR CODE SHOULD CONTAIN:
+
+       STU001
+
+       or
+
+       STU002
+
+       etc.
+    */
+
+    markStudent(decodedText);
+
+}
+
+
+// Start QR scanner
+
+let scanner =
+    new Html5QrcodeScanner(
+
+        "reader",
+
+        {
+            fps: 10,
+
+            qrbox: {
+                width: 250,
+                height: 250
+            }
+
+        },
+
+        false
+
+    );
+
+
+scanner.render(qrSuccess);
+
+
+// ========================================
+// TEACHER MANUAL MARKING
+// ========================================
+
+function teacherMark() {
+
+    let number =
+        document.getElementById(
+            "teacherStudent"
+        ).value;
+
+
+    if (
+        number === "" ||
+        number < 1 ||
+        number > 65
+    ) {
+
+        showMessage(
+            "teacherMessage",
+            "❌ Enter a number from 1 to 65.",
+            "red"
+        );
+
+        return;
+
+    }
+
+
+    let student =
+        students[number - 1];
+
+
+    if (student.present) {
+
+        showMessage(
+            "teacherMessage",
+            "⚠️ Attendance already marked.",
+            "orange"
+        );
+
+        return;
+
+    }
+
+
+    let now = new Date();
+
+    student.present = true;
+
+    student.time =
+        now.toLocaleTimeString();
+
+
+    saveData();
+
+    updateDisplay();
+
+
+    showMessage(
+        "teacherMessage",
+        "✅ " + student.id +
+        " marked present.",
+        "green"
+    );
+
+
+    document.getElementById(
+        "teacherStudent"
+    ).value = "";
+
+}
+
+
+// ========================================
+// DISPLAY STUDENTS
+// ========================================
+
+function updateDisplay() {
+
+    let table =
+        document.getElementById(
+            "studentTable"
+        );
+
+    table.innerHTML = "";
+
+
+    students.forEach(student => {
+
+        let row =
+            document.createElement("tr");
+
+
+        row.innerHTML = `
+
+            <td>${student.number}</td>
+
+            <td>${student.id}</td>
+
+            <td>
+                ${
+                    student.present
+
+                    ?
+
+                    '<span class="presentBadge">PRESENT</span>'
+
+                    :
+
+                    '<span class="absentBadge">ABSENT</span>'
+                }
+            </td>
+
+            <td>
+                ${student.time || "-"}
+            </td>
+
+        `;
+
+
+        table.appendChild(row);
+
+    });
+
+
+    let present =
+        students.filter(
+            s => s.present
+        ).length;
+
+
+    let absent =
+        students.length - present;
+
+
+    document.getElementById(
+        "present"
+    ).textContent = present;
+
+
+    document.getElementById(
+        "absent"
+    ).textContent = absent;
+
+}
+
+
+// ========================================
+// RESET
+// ========================================
+
+function resetAttendance() {
+
+    let confirmReset =
+        confirm(
+            "Reset today's attendance?"
+        );
+
+
+    if (!confirmReset) return;
+
+
+    students.forEach(student => {
+
+        student.present = false;
+
+        student.time = "";
+
+    });
+
+
+    saveData();
+
+    updateDisplay();
+
+
+    showMessage(
+        "teacherMessage",
+        "🔄 Attendance reset.",
+        "green"
+    );
+
+}
+
+
+// ========================================
+// MESSAGE
+// ========================================
+
+function showMessage(
+    element,
+    text,
+    color
+) {
+
+    let box =
+        document.getElementById(element);
+
+
+    box.textContent = text;
+
+    box.style.color = color;
+
+    box.className = "message";
+
+}
+
+
+// Initial display
+
+updateDisplay();
+
+</script>
+
+</body>
+</html></pre>
+        </body>
+    </html>
